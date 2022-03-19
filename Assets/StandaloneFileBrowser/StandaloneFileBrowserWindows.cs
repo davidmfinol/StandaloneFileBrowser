@@ -2,10 +2,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
-using UnityExtensionMethods;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Global
 
@@ -107,7 +107,7 @@ namespace SFB
 
                 if (GetOpenFileName(ref openFileName))
                 {
-                    string file = UnityFileMethods.ValidateFile(Marshal.PtrToStringBSTR(openFileName.file));
+                    string file = ValidateFile(Marshal.PtrToStringBSTR(openFileName.file));
 
                     if (!multiselect)
                         return new[] {file};
@@ -121,7 +121,7 @@ namespace SFB
                     for (var ii = 1; ii < files.Length - 1; ii++)
                     {
                         string resultFile = files[0] + '\\' + files[ii];
-                        selectedFilesList.Add(UnityFileMethods.ValidateFile(resultFile));
+                        selectedFilesList.Add(ValidateFile(resultFile));
                     }
 
                     return selectedFilesList.ToArray();
@@ -133,6 +133,53 @@ namespace SFB
             }
 
             return new string[0];
+        }
+
+        private static string ValidatePath(string path, bool addEndDelimiter = true)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+
+            string pathTemp = path.Trim();
+
+            // ReSharper disable once JoinDeclarationAndInitializer
+            string result;
+#if UNITY_STANDALONE_WIN
+            result = pathTemp.Replace('/', '\\');
+            if (addEndDelimiter && !result.EndsWith("\\"))
+                result += "\\";
+#else
+            result = pathTemp.Replace('\\', '/');
+            if (addEndDelimiter && !result.EndsWith("/"))
+                result += "/";
+#endif
+
+            return string.Join(string.Empty, result.Split(Path.GetInvalidPathChars()));
+        }
+
+        public static string ValidateFile(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+
+            string result = ValidatePath(path);
+
+            if (result.EndsWith("\\") || result.EndsWith("/"))
+                result = result.Substring(0, result.Length - 1);
+
+            // ReSharper disable once JoinDeclarationAndInitializer
+            string fileName;
+#if UNITY_STANDALONE_WIN
+            fileName = result.Substring(result.LastIndexOf('\\') + 1);
+#else
+            fileName = result.Substring(result.LastIndexOf('/') + 1);
+#endif
+
+            string newName =
+                string.Join(string.Empty,
+                    fileName.Split(Path
+                        .GetInvalidFileNameChars()));
+            return result.Substring(0, result.Length - fileName.Length) + newName;
         }
 
         public void OpenFilePanelAsync(string title, string directory, ExtensionFilter[] extensions,

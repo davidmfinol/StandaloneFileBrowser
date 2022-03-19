@@ -82,3 +82,6 @@ $RECYCLE.BIN/
 output_log.txt
 
 .vscode
+UserSettings
+Logs/
+.idea
